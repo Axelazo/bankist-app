@@ -71,6 +71,117 @@ const currencies = new Map([
   ['GBP', 'Pound sterling'],
 ]);
 
+const properties = {
+  symbol: '$',
+};
+
 const movements = [200, 450, -400, 3000, -650, -130, 70, 1300];
 
 /////////////////////////////////////////////////
+let currentAccount;
+
+/* EVENT LISTENERS */
+btnLogin.addEventListener('click', function (e) {
+  e.preventDefault();
+  currentAccount = accounts.find(
+    account => account.username === inputLoginUsername.value
+  );
+
+  console.log(currentAccount);
+  if (currentAccount?.pin === Number(inputLoginPin.value)) {
+    UpdateUI(currentAccount);
+  }
+  containerApp.style.opacity = 100;
+  inputLoginPin.value = inputLoginUsername.value = '';
+});
+
+btnTransfer.addEventListener('click', function (e) {
+  e.preventDefault();
+  const amount = Number(inputTransferAmount.value);
+  const receiverAccount = accounts.find(
+    acc => acc.username === inputTransferTo.value
+  );
+
+  console.log(amount, receiverAccount);
+
+  if (
+    amount > 0 &&
+    receiverAccount &&
+    amount <= currentAccount.balance &&
+    receiverAccount.username !== currentAccount.username
+  ) {
+    currentAccount.movements.push(-amount);
+    receiverAccount.movements.push(amount);
+  }
+
+  UpdateUI(currentAccount);
+  inputTransferAmount.value = inputTransferTo.value = '';
+});
+
+/* FUNCTIONS*/
+const computeUsernames = function (accounts) {
+  accounts.forEach(function (account) {
+    account.username = account.owner
+      .toLowerCase()
+      .split(' ')
+      .map(function (name) {
+        return name[0];
+      })
+      .join('');
+  });
+};
+
+const displayMovements = function (movements) {
+  containerMovements.innerHTML = '';
+  movements.forEach(movement => {
+    const type = movement > 0 ? 'deposit' : 'withdrawal';
+    const html = `
+    <div class="movements__row">
+      <div class="movements__type movements__type--${type}"> ${type}</div>
+      <div class="movements__value">${movement + properties.symbol}</div>
+    </div>
+    `;
+
+    containerMovements.insertAdjacentHTML('afterbegin', html);
+  });
+};
+
+const calculateBalance = function (account) {
+  account.balance = account.movements.reduce(
+    (previous, current) => previous + current,
+    0
+  );
+};
+
+const displaySummary = function (movements) {
+  const balance =
+    movements.reduce((previous, movement) => previous + movement, 0) +
+    properties.symbol;
+  labelBalance.textContent = balance;
+
+  const deposits = movements.filter(function (movement) {
+    return movement > 0;
+  });
+  const withdrawals = movements.filter(function (movement) {
+    return movement < 0;
+  });
+
+  labelSumIn.textContent =
+    deposits.reduce((previous, current) => previous + current, 0) +
+    properties.symbol;
+  labelSumOut.textContent =
+    withdrawals.reduce((previous, current) => previous + current, 0) +
+    properties.symbol;
+
+  labelWelcome.textContent = `Welcome back ${
+    currentAccount.owner.split(' ')[0]
+  }`;
+};
+
+const UpdateUI = function (account) {
+  calculateBalance(currentAccount);
+  displaySummary(account.movements);
+  displayMovements(account.movements);
+};
+
+computeUsernames(accounts);
